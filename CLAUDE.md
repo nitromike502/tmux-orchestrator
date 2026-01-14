@@ -31,6 +31,50 @@ As the Orchestrator, you maintain high-level oversight without getting bogged do
 6. **Researcher**: Technology evaluation
 7. **Documentation Writer**: Technical documentation
 
+## Agent Naming Convention
+
+### Project-Based Naming
+Agents are referenced by **project name**, which defaults to the project directory name. This provides a natural way for users to communicate with the orchestrator about specific agents.
+
+### How It Works
+- When an agent is created for a project, register it with the project directory name
+- Names are **case-insensitive** (AILA, aila, Aila all work)
+- The orchestrator maintains an internal mapping of project names to tmux panes
+
+### User Commands
+When the user says:
+- **"Ask AILA..."** → Send message to the AILA project agent
+- **"Tell AILA..."** → Send instruction to the AILA project agent
+- **"Check on AILA"** → Capture and report AILA agent's current status
+- **"What is AILA doing?"** → Check AILA agent's progress
+
+### Orchestrator Agent Registry
+The orchestrator should maintain a mapping like:
+```
+| Project Name | Pane Address | Project Path              |
+|--------------|--------------|---------------------------|
+| AILA         | 0:0.1        | /home/aila/httpdocs       |
+| glacier      | 0:0.2        | /home/glacier/api         |
+| frontend     | 1:0.0        | /home/apps/frontend       |
+```
+
+### Naming Rules
+1. **Default name**: Use the project directory name (e.g., `/home/aila/httpdocs` → `aila`)
+2. **Case insensitive**: Store lowercase, match case-insensitively
+3. **Unique names**: If duplicate directory names exist, use full path or ask user for alias
+4. **User override**: User can specify a custom name when creating an agent
+
+### Example Interaction
+```
+User: "Ask AILA to check the database migrations"
+Orchestrator: [looks up AILA → 0:0.1]
+Orchestrator: [sends message to 0:0.1]: "Please check the database migrations"
+
+User: "What is AILA doing?"
+Orchestrator: [captures pane 0:0.1 output]
+Orchestrator: "AILA is currently investigating the login bug..."
+```
+
 ## 🔐 Git Discipline - MANDATORY FOR ALL AGENTS
 
 ### Core Git Safety Rules
@@ -142,18 +186,18 @@ Follow this systematic sequence to start any project:
 
 #### 1. Find the Project
 ```bash
-# List all directories in ~/Coding to find projects
-ls -la ~/Coding/ | grep "^d" | awk '{print $NF}' | grep -v "^\."
+# List all directories in your projects folder
+ls -la /path/to/projects/ | grep "^d" | awk '{print $NF}' | grep -v "^\."
 
 # If project name is ambiguous, list matches
-ls -la ~/Coding/ | grep -i "task"  # for "task templates"
+ls -la /path/to/projects/ | grep -i "task"  # for "task templates"
 ```
 
 #### 2. Create Tmux Session
 ```bash
 # Create session with project name (use hyphens for spaces)
 PROJECT_NAME="task-templates"  # or whatever the folder is called
-PROJECT_PATH="/Users/jasonedward/Coding/$PROJECT_NAME"
+PROJECT_PATH="/path/to/projects/$PROJECT_NAME"
 tmux new-session -d -s $PROJECT_NAME -c "$PROJECT_PATH"
 ```
 
@@ -249,16 +293,16 @@ tmux capture-pane -t $PROJECT_NAME:2 -p | grep -i error
 ### Example: Starting "Task Templates" Project
 ```bash
 # 1. Find project
-ls -la ~/Coding/ | grep -i task
+ls -la /path/to/projects/ | grep -i task
 # Found: task-templates
 
 # 2. Create session
-tmux new-session -d -s task-templates -c "/Users/jasonedward/Coding/task-templates"
+tmux new-session -d -s task-templates -c "/path/to/projects/task-templates"
 
 # 3. Set up windows
 tmux rename-window -t task-templates:0 "Claude-Agent"
-tmux new-window -t task-templates -n "Shell" -c "/Users/jasonedward/Coding/task-templates"
-tmux new-window -t task-templates -n "Dev-Server" -c "/Users/jasonedward/Coding/task-templates"
+tmux new-window -t task-templates -n "Shell" -c "/path/to/projects/task-templates"
+tmux new-window -t task-templates -n "Dev-Server" -c "/path/to/projects/task-templates"
 
 # 4. Start Claude and brief
 tmux send-keys -t task-templates:0 "claude" Enter
@@ -379,10 +423,10 @@ Priority: HIGH/MED/LOW
 #### 1. Project Analysis
 ```bash
 # Find project
-ls -la ~/Coding/ | grep -i "[project-name]"
+ls -la /path/to/projects/ | grep -i "[project-name]"
 
 # Analyze project type
-cd ~/Coding/[project-name]
+cd /path/to/projects/[project-name]
 test -f package.json && echo "Node.js project"
 test -f requirements.txt && echo "Python project"
 ```
@@ -409,7 +453,7 @@ tmux new-window -t [session] -n "TEMP-CodeReview"
 ```bash
 # 1. Capture complete conversation
 tmux capture-pane -t [session]:[window] -S - -E - > \
-  ~/Coding/Tmux\ orchestrator/registry/logs/[session]_[role]_$(date +%Y%m%d_%H%M%S).log
+  /home/tmux/registry/logs/[session]_[role]_$(date +%Y%m%d_%H%M%S).log
 
 # 2. Create summary of work completed
 echo "=== Agent Summary ===" >> [logfile]
@@ -423,7 +467,7 @@ tmux kill-window -t [session]:[window]
 
 ### Agent Logging Structure
 ```
-~/Coding/Tmux orchestrator/registry/
+/home/tmux/registry/
 ├── logs/            # Agent conversation logs
 ├── sessions.json    # Active session tracking
 └── notes/           # Orchestrator notes and summaries
@@ -622,20 +666,20 @@ When a command fails:
 #### Using send-claude-message.sh
 ```bash
 # Basic usage - ALWAYS use this instead of manual tmux commands
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh <target> "message"
+/home/tmux/send-claude-message.sh <target> "message"
 
 # Examples:
 # Send to a window
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh agentic-seek:3 "Hello Claude!"
+/home/tmux/send-claude-message.sh agentic-seek:3 "Hello Claude!"
 
 # Send to a specific pane in split-screen
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh tmux-orc:0.1 "Message to pane 1"
+/home/tmux/send-claude-message.sh tmux-orc:0.1 "Message to pane 1"
 
 # Send complex instructions
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh glacier-backend:0 "Please check the database schema for the campaigns table and verify all columns are present"
+/home/tmux/send-claude-message.sh glacier-backend:0 "Please check the database schema for the campaigns table and verify all columns are present"
 
 # Send status update requests
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh ai-chat:2 "STATUS UPDATE: What's your current progress on the authentication implementation?"
+/home/tmux/send-claude-message.sh ai-chat:2 "STATUS UPDATE: What's your current progress on the authentication implementation?"
 ```
 
 #### Why Use the Script?
@@ -646,7 +690,7 @@ When a command fails:
 5. **Consistent messaging**: All agents receive messages the same way
 
 #### Script Location and Usage
-- **Location**: `/Users/jasonedward/Coding/Tmux orchestrator/send-claude-message.sh`
+- **Location**: `/home/tmux/send-claude-message.sh`
 - **Permissions**: Already executable, ready to use
 - **Arguments**: 
   - First: target (session:window or session:window.pane)
@@ -661,34 +705,34 @@ tmux send-keys -t project:0 "claude" Enter
 sleep 5
 
 # Then use the script for the briefing
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh project:0 "You are responsible for the frontend codebase. Please start by analyzing the current project structure and identifying any immediate issues."
+/home/tmux/send-claude-message.sh project:0 "You are responsible for the frontend codebase. Please start by analyzing the current project structure and identifying any immediate issues."
 ```
 
 ##### 2. Cross-Agent Coordination
 ```bash
 # Ask frontend agent about API usage
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh frontend:0 "Which API endpoints are you currently using from the backend?"
+/home/tmux/send-claude-message.sh frontend:0 "Which API endpoints are you currently using from the backend?"
 
 # Share info with backend agent
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh backend:0 "Frontend is using /api/v1/campaigns and /api/v1/flows endpoints"
+/home/tmux/send-claude-message.sh backend:0 "Frontend is using /api/v1/campaigns and /api/v1/flows endpoints"
 ```
 
 ##### 3. Status Checks
 ```bash
 # Quick status request
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh session:0 "Quick status update please"
+/home/tmux/send-claude-message.sh session:0 "Quick status update please"
 
 # Detailed status request
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh session:0 "STATUS UPDATE: Please provide: 1) Completed tasks, 2) Current work, 3) Any blockers"
+/home/tmux/send-claude-message.sh session:0 "STATUS UPDATE: Please provide: 1) Completed tasks, 2) Current work, 3) Any blockers"
 ```
 
 ##### 4. Providing Assistance
 ```bash
 # Share error information
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh session:0 "I see in your server window that port 3000 is already in use. Try port 3001 instead."
+/home/tmux/send-claude-message.sh session:0 "I see in your server window that port 3000 is already in use. Try port 3001 instead."
 
 # Guide stuck agents
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh session:0 "The error you're seeing is because the virtual environment isn't activated. Run 'source venv/bin/activate' first."
+/home/tmux/send-claude-message.sh session:0 "The error you're seeing is because the virtual environment isn't activated. Run 'source venv/bin/activate' first."
 ```
 
 #### OLD METHOD (DO NOT USE)
@@ -699,18 +743,79 @@ sleep 1
 tmux send-keys -t session:window Enter
 
 # ✅ DO THIS INSTEAD:
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh session:window "message"
+/home/tmux/send-claude-message.sh session:window "message"
 ```
 
 #### Checking for Responses
-After sending a message, check for the response:
+After sending a message, use the scheduler to check for responses (avoid `sleep` which blocks conversation):
 ```bash
 # Send message
-/Users/jasonedward/Coding/Tmux\ orchestrator/send-claude-message.sh session:0 "What's your status?"
+/home/tmux/send-claude-message.sh session:0 "What's your status?"
 
-# Wait a bit for response
-sleep 5
-
-# Check what the agent said
-tmux capture-pane -t session:0 -p | tail -50
+# Schedule a check-in (does NOT block conversation)
+/home/tmux/schedule_with_note.sh 1 "Check agent response" 0:0.0 0:0.1
 ```
+
+## Split-Pane Orchestration
+
+### Overview
+Run agents in split panes so the user can watch them work alongside the orchestrator conversation.
+
+### Creating Split Panes
+```bash
+# Split current window horizontally (side-by-side)
+tmux split-window -h -t 0:0
+
+# Split current window vertically (top/bottom)
+tmux split-window -v -t 0:0
+
+# Pane addressing after split:
+# - Original pane: 0:0.0
+# - New pane: 0:0.1
+# - Additional splits: 0:0.2, 0:0.3, etc.
+```
+
+### Starting an Agent in a Split Pane
+```bash
+# 1. Split the window
+tmux split-window -h -t 0:0
+
+# 2. Start Claude in the new pane (account for user's shell startup behavior)
+tmux send-keys -t 0:0.1 "cd /path/to/project && claude" Enter
+
+# 3. Register the agent in your internal mapping
+# Project: myproject → Pane: 0:0.1
+```
+
+### Switching Layouts
+```bash
+# Side-by-side (left/right)
+tmux select-layout -t 0:0 even-horizontal
+
+# Stacked (top/bottom)
+tmux select-layout -t 0:0 even-vertical
+
+# Cycle through layouts
+# User can press: Ctrl+b Space
+```
+
+### Closing Agent Panes
+```bash
+# Close a specific pane
+tmux kill-pane -t 0:0.1
+
+# Update your agent registry to remove the entry
+```
+
+### Non-Blocking Agent Check-ins
+**CRITICAL**: Never use `sleep` to wait for agent responses - it blocks the orchestrator conversation.
+
+```bash
+# ❌ DON'T DO THIS - blocks conversation:
+sleep 60 && tmux capture-pane -t 0:0.1 -p
+
+# ✅ DO THIS - non-blocking:
+/home/tmux/schedule_with_note.sh 1 "Check agent progress" 0:0.0 0:0.1
+```
+
+The scheduler will send a reminder to your pane when it's time to check, allowing conversation to continue.
