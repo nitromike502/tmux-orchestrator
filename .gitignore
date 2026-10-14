@@ -1,2 +1,9 @@
 .claude/logs/
 .idea/
+
+# Runtime artifacts
+registry/logs/
+*.log
+*.pid
+.deleted/
+pending_request.txt

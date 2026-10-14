@@ -3,7 +3,7 @@
 # Usage: ./schedule_with_note.sh <minutes> "<note>" [target_window] [agent_pane_to_check]
 #
 # Examples:
-#   ./schedule_with_note.sh 1 "Check agent progress" 0:0.0 0:0.1
+#   ./schedule_with_note.sh 1 "Check agent progress" 0:1.1 0:1.2
 #   ./schedule_with_note.sh 2 "Status update"  # Uses defaults
 #
 # Arguments:
@@ -14,7 +14,7 @@
 
 MINUTES=${1:-3}
 NOTE=${2:-"Standard check-in"}
-TARGET=${3:-$(tmux display-message -p "#{session_name}:#{window_index}.#{pane_index}" 2>/dev/null || echo "0:0.0")}
+TARGET=${3:-$(tmux display-message -p "#{session_name}:#{window_index}.#{pane_index}" 2>/dev/null || echo "0:1.1")}
 AGENT_PANE=${4:-""}
 
 # Create a note file for the next check

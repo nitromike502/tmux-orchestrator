@@ -1,0 +1,160 @@
+{
+  "projects": [
+    {
+      "name": "AILA",
+      "aliases": [
+        "AILAORG",
+        "aila",
+        "aila-org",
+        "aila-laravel"
+      ],
+      "path": "/home/aila/httpdocs",
+      "description": "AILA Laravel application (main site)",
+      "type": "laravel",
+      "session_name": "AILA",
+      "services": [
+        "ddev"
+      ]
+    },
+    {
+      "name": "AILA .NET",
+      "aliases": [
+        "AILANET",
+        "aila-net",
+        "aila-dotnet",
+        "aila-website",
+        "dotnet"
+      ],
+      "path": "/mnt/j/Aila/website",
+      "description": "AILA .NET website",
+      "type": "dotnet",
+      "session_name": "AILA_NET",
+      "services": []
+    },
+    {
+      "name": "Stulz",
+      "aliases": [
+        "stulz"
+      ],
+      "path": "/home/stulz",
+      "description": "Stulz project",
+      "session_name": "stulz",
+      "services": []
+    },
+    {
+      "name": "NLCL",
+      "aliases": [
+        "nlcl",
+        "north-louisiana-crime-lab"
+      ],
+      "path": "/home/nlcl/httpdocs",
+      "description": "North Louisiana Crime Lab Laravel application",
+      "type": "laravel",
+      "session_name": "NLCL",
+      "services": [
+        "ddev"
+      ]
+    },
+    {
+      "name": "Personal",
+      "aliases": [
+        "personal",
+        "playground"
+      ],
+      "path": "/home/meckert/personal",
+      "description": "Personal playground/sandbox for experiments",
+      "type": "misc",
+      "session_name": "personal",
+      "services": []
+    },
+    {
+      "name": "Duke",
+      "aliases": [
+        "duke"
+      ],
+      "path": "/home/duke/httpdocs",
+      "description": "Duke Energy project. Single 'duke' session with 7 windows: docs, frontend, httpdocs (Laravel API), dev-machine, duke-energy-marketplace, docs-viewer, infrastructure",
+      "type": "laravel",
+      "session_name": "duke",
+      "services": [
+        "ddev"
+      ],
+      "windows": [
+        {
+          "name": "docs",
+          "path": "/home/duke/docs"
+        },
+        {
+          "name": "frontend",
+          "path": "/home/duke/frontend",
+          "description": "pnpm/turbo monorepo"
+        },
+        {
+          "name": "httpdocs",
+          "path": "/home/duke/httpdocs",
+          "description": "Laravel API"
+        },
+        {
+          "name": "dev-machine",
+          "path": "/home/duke/dev-machine"
+        },
+        {
+          "name": "duke-energy-marketplace",
+          "path": "/home/duke/duke-energy-marketplace"
+        },
+        {
+          "name": "docs-viewer",
+          "path": "/home/duke/docs-viewer"
+        },
+        {
+          "name": "infrastructure",
+          "path": "/home/duke/infrastructure",
+          "description": "Infrastructure repo (CodeCommit: duke-energy-infrastructure)"
+        }
+      ]
+    },
+    {
+      "name": "Orases Marketplace",
+      "aliases": [
+        "marketplace",
+        "orases-marketplace",
+        "orases"
+      ],
+      "path": "/home/orases/orases-marketplace",
+      "description": "Orases Marketplace project",
+      "session_name": "marketplace",
+      "services": []
+    },
+    {
+      "name": "CC Time Reporter",
+      "aliases": [
+        "cctimereporter",
+        "time-reporter",
+        "timereporter"
+      ],
+      "path": "/home/orases/cctimereporter",
+      "description": "Claude Code time reporting tool",
+      "session_name": "cctimereporter",
+      "services": []
+    },
+    {
+      "name": "Harvest MCP",
+      "aliases": [
+        "harvest-mcp",
+        "harvest",
+        "harvestmcp"
+      ],
+      "path": "/home/mcp/harvest-mcp",
+      "description": "MCP server for Harvest time tracking API",
+      "type": "node",
+      "session_name": "harvest-mcp",
+      "services": []
+    }
+  ],
+  "metadata": {
+    "created": "2026-01-20",
+    "last_updated": "2026-10-09",
+    "ddev_recovery": "If ddev start fails, run 'ddev restart' to resolve container conflicts",
+    "session_ordering": "Ctrl+b s / Ctrl+b w are bound to 'choose-tree -O index' in ~/.tmux.conf, so sessions display in creation order and windows in index order. Create sessions and windows in the exact order the user lists them at startup - that order is what they will see in the chooser."
+  }
+}

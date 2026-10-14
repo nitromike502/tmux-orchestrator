@@ -48,14 +48,20 @@ When the user says:
 - **"Check on AILA"** → Capture and report AILA agent's current status
 - **"What is AILA doing?"** → Check AILA agent's progress
 
+### Project Directory Mapping
+Project names, paths, types, and startup commands are defined in the **directory mapping document**:
+`/home/tmux/registry/projects.json`
+
+Always consult this file to resolve project names to their correct paths and determine startup requirements (e.g., DDEV, npm, etc.).
+
 ### Orchestrator Agent Registry
 The orchestrator should maintain a mapping like:
 ```
 | Project Name | Pane Address | Project Path              |
 |--------------|--------------|---------------------------|
-| AILA         | 0:0.1        | /home/aila/httpdocs       |
-| glacier      | 0:0.2        | /home/glacier/api         |
-| frontend     | 1:0.0        | /home/apps/frontend       |
+| AILA         | 0:1.2        | /home/aila/httpdocs       |
+| glacier      | 0:1.3        | /home/glacier/api         |
+| frontend     | frontend:1.1 | /home/apps/frontend       |
 ```
 
 ### Naming Rules
@@ -67,11 +73,11 @@ The orchestrator should maintain a mapping like:
 ### Example Interaction
 ```
 User: "Ask AILA to check the database migrations"
-Orchestrator: [looks up AILA → 0:0.1]
-Orchestrator: [sends message to 0:0.1]: "Please check the database migrations"
+Orchestrator: [looks up AILA → 0:1.2]
+Orchestrator: [sends message to 0:1.2]: "Please check the database migrations"
 
 User: "What is AILA doing?"
-Orchestrator: [captures pane 0:0.1 output]
+Orchestrator: [captures pane 0:1.2 output]
 Orchestrator: "AILA is currently investigating the login bug..."
 ```
 
@@ -168,7 +174,7 @@ Windows should be named based on their actual function:
 tmux rename-window -t session:window-index "New-Name"
 
 # Example:
-tmux rename-window -t ai-chat:0 "Claude-Convex"
+tmux rename-window -t ai-chat:1 "Claude-Convex"
 tmux rename-window -t glacier-backend:3 "Uvicorn-API"
 ```
 
@@ -179,6 +185,10 @@ tmux rename-window -t glacier-backend:3 "Uvicorn-API"
 - **Project Context**: Names reflect actual purpose
 
 ## Project Startup Sequence
+
+### 🚨 New Sessions: Single Window/Pane Only
+
+When the user asks to start a new session (including when running the startup skill), create **only one window with one pane** in that session. Do not add Shell, Dev-Server, or other auxiliary windows by default. The user will request additional windows/panes explicitly if needed. This applies to every "open/start/fire up [project]" request.
 
 ### When User Says "Open/Start/Fire up [Project Name]"
 
@@ -203,24 +213,24 @@ tmux new-session -d -s $PROJECT_NAME -c "$PROJECT_PATH"
 
 #### 3. Set Up Standard Windows
 ```bash
-# Window 0: Claude Agent
-tmux rename-window -t $PROJECT_NAME:0 "Claude-Agent"
+# Window 1 (the first, since base-index is 1): Claude Agent
+tmux rename-window -t $PROJECT_NAME: "Claude-Agent"
 
-# Window 1: Shell
+# Window 2: Shell
 tmux new-window -t $PROJECT_NAME -n "Shell" -c "$PROJECT_PATH"
 
-# Window 2: Dev Server (will start app here)
+# Window 3: Dev Server (will start app here)
 tmux new-window -t $PROJECT_NAME -n "Dev-Server" -c "$PROJECT_PATH"
 ```
 
 #### 4. Brief the Claude Agent
 ```bash
 # Send briefing message to Claude agent
-tmux send-keys -t $PROJECT_NAME:0 "claude" Enter
+tmux send-keys -t $PROJECT_NAME:Claude-Agent "claude" Enter
 sleep 5  # Wait for Claude to start
 
 # Send the briefing
-tmux send-keys -t $PROJECT_NAME:0 "You are responsible for the $PROJECT_NAME codebase. Your duties include:
+tmux send-keys -t $PROJECT_NAME:Claude-Agent "You are responsible for the $PROJECT_NAME codebase. Your duties include:
 1. Getting the application running
 2. Checking GitHub issues for priorities  
 3. Working on highest priority tasks
@@ -231,9 +241,9 @@ First, analyze the project to understand:
 - How to start the development server
 - What the main purpose of the application is
 
-Then start the dev server in window 2 (Dev-Server) and begin working on priority issues."
+Then start the dev server in the Dev-Server window and begin working on priority issues."
 sleep 1
-tmux send-keys -t $PROJECT_NAME:0 Enter
+tmux send-keys -t $PROJECT_NAME:Claude-Agent Enter
 ```
 
 #### 5. Project Type Detection (Agent Should Do This)
@@ -253,16 +263,16 @@ test -f go.mod
 ```
 
 #### 6. Start Development Server (Agent Should Do This)
-Based on project type, the agent should start the appropriate server in window 2:
+Based on project type, the agent should start the appropriate server in the Dev-Server window:
 ```bash
 # For Next.js/Node projects
-tmux send-keys -t $PROJECT_NAME:2 "npm install && npm run dev" Enter
+tmux send-keys -t $PROJECT_NAME:Dev-Server "npm install && npm run dev" Enter
 
 # For Python/FastAPI
-tmux send-keys -t $PROJECT_NAME:2 "source venv/bin/activate && uvicorn app.main:app --reload" Enter
+tmux send-keys -t $PROJECT_NAME:Dev-Server "source venv/bin/activate && uvicorn app.main:app --reload" Enter
 
 # For Django
-tmux send-keys -t $PROJECT_NAME:2 "source venv/bin/activate && python manage.py runserver" Enter
+tmux send-keys -t $PROJECT_NAME:Dev-Server "source venv/bin/activate && python manage.py runserver" Enter
 ```
 
 #### 7. Check GitHub Issues (Agent Should Do This)
@@ -281,13 +291,13 @@ ls -la | grep -E "(TODO|ROADMAP|TASKS)"
 The orchestrator should:
 ```bash
 # Check agent status periodically
-tmux capture-pane -t $PROJECT_NAME:0 -p | tail -30
+tmux capture-pane -t $PROJECT_NAME:Claude-Agent -p | tail -30
 
 # Check if dev server started successfully  
-tmux capture-pane -t $PROJECT_NAME:2 -p | tail -20
+tmux capture-pane -t $PROJECT_NAME:Dev-Server -p | tail -20
 
 # Monitor for errors
-tmux capture-pane -t $PROJECT_NAME:2 -p | grep -i error
+tmux capture-pane -t $PROJECT_NAME:Dev-Server -p | grep -i error
 ```
 
 ### Example: Starting "Task Templates" Project
@@ -300,12 +310,12 @@ ls -la /path/to/projects/ | grep -i task
 tmux new-session -d -s task-templates -c "/path/to/projects/task-templates"
 
 # 3. Set up windows
-tmux rename-window -t task-templates:0 "Claude-Agent"
+tmux rename-window -t task-templates: "Claude-Agent"
 tmux new-window -t task-templates -n "Shell" -c "/path/to/projects/task-templates"
 tmux new-window -t task-templates -n "Dev-Server" -c "/path/to/projects/task-templates"
 
 # 4. Start Claude and brief
-tmux send-keys -t task-templates:0 "claude" Enter
+tmux send-keys -t task-templates:Claude-Agent "claude" Enter
 # ... (briefing as above)
 ```
 
@@ -325,13 +335,13 @@ tmux send-keys -t task-templates:0 "claude" Enter
 tmux list-windows -t [session] -F "#{window_index}: #{window_name}"
 
 # Check each window to understand project
-tmux capture-pane -t [session]:0 -p | tail -50
+tmux capture-pane -t [session]:[dev-window] -p | tail -50
 ```
 
 #### 2. Create PM Window
 ```bash
 # Get project path from existing window
-PROJECT_PATH=$(tmux display-message -t [session]:0 -p '#{pane_current_path}')
+PROJECT_PATH=$(tmux display-message -t [session]: -p '#{pane_current_path}')
 
 # Create new window for PM
 tmux new-window -t [session] -n "Project-Manager" -c "$PROJECT_PATH"
@@ -359,7 +369,7 @@ Key Principles:
 - Track technical debt
 - Communicate clearly and constructively
 
-First, analyze the project and existing team members, then introduce yourself to the developer in window 0."
+First, analyze the project and existing team members, then introduce yourself to the developer in the Claude-Agent window."
 sleep 1
 tmux send-keys -t [session]:[PM-window] Enter
 ```
@@ -368,12 +378,12 @@ tmux send-keys -t [session]:[PM-window] Enter
 The PM should:
 ```bash
 # Check developer window
-tmux capture-pane -t [session]:0 -p | tail -30
+tmux capture-pane -t [session]:[dev-window] -p | tail -30
 
 # Introduce themselves
-tmux send-keys -t [session]:0 "Hello! I'm the new Project Manager for this project. I'll be helping coordinate our work and ensure we maintain high quality standards. Could you give me a brief status update on what you're currently working on?"
+tmux send-keys -t [session]:[dev-window] "Hello! I'm the new Project Manager for this project. I'll be helping coordinate our work and ensure we maintain high quality standards. Could you give me a brief status update on what you're currently working on?"
 sleep 1
-tmux send-keys -t [session]:0 Enter
+tmux send-keys -t [session]:[dev-window] Enter
 ```
 
 ## Communication Protocols
@@ -521,7 +531,7 @@ echo "Current window: $CURRENT_WINDOW"
 
 The `schedule_with_note.sh` script MUST:
 - Accept a third parameter for target window: `./schedule_with_note.sh <minutes> "<note>" <target_window>`
-- Default to `tmux-orc:0` if no target specified
+- Default to the current pane (fallback `tmux-orc:1`) if no target specified
 - Always verify the target window exists before scheduling
 
 ### Why This Matters
@@ -531,6 +541,8 @@ The `schedule_with_note.sh` script MUST:
 - **Self-Recovery**: Orchestrators must be able to restart themselves reliably
 
 ### Scheduling Best Practices
+
+> ⏱️ **Timer limit (user preference):** When setting timers (sleeps, wait loops, scheduled check-ins), never make them longer than **1 minute**. Use short intervals and re-check, rather than one long timer.
 
 ```bash
 # Always use current window for self-scheduling
@@ -673,10 +685,10 @@ When a command fails:
 /home/tmux/send-claude-message.sh agentic-seek:3 "Hello Claude!"
 
 # Send to a specific pane in split-screen
-/home/tmux/send-claude-message.sh tmux-orc:0.1 "Message to pane 1"
+/home/tmux/send-claude-message.sh tmux-orc:1.2 "Message to the second pane"
 
 # Send complex instructions
-/home/tmux/send-claude-message.sh glacier-backend:0 "Please check the database schema for the campaigns table and verify all columns are present"
+/home/tmux/send-claude-message.sh glacier-backend: "Please check the database schema for the campaigns table and verify all columns are present"
 
 # Send status update requests
 /home/tmux/send-claude-message.sh ai-chat:2 "STATUS UPDATE: What's your current progress on the authentication implementation?"
@@ -701,38 +713,38 @@ When a command fails:
 ##### 1. Starting Claude and Initial Briefing
 ```bash
 # Start Claude first
-tmux send-keys -t project:0 "claude" Enter
+tmux send-keys -t project: "claude" Enter
 sleep 5
 
 # Then use the script for the briefing
-/home/tmux/send-claude-message.sh project:0 "You are responsible for the frontend codebase. Please start by analyzing the current project structure and identifying any immediate issues."
+/home/tmux/send-claude-message.sh project: "You are responsible for the frontend codebase. Please start by analyzing the current project structure and identifying any immediate issues."
 ```
 
 ##### 2. Cross-Agent Coordination
 ```bash
 # Ask frontend agent about API usage
-/home/tmux/send-claude-message.sh frontend:0 "Which API endpoints are you currently using from the backend?"
+/home/tmux/send-claude-message.sh frontend: "Which API endpoints are you currently using from the backend?"
 
 # Share info with backend agent
-/home/tmux/send-claude-message.sh backend:0 "Frontend is using /api/v1/campaigns and /api/v1/flows endpoints"
+/home/tmux/send-claude-message.sh backend: "Frontend is using /api/v1/campaigns and /api/v1/flows endpoints"
 ```
 
 ##### 3. Status Checks
 ```bash
 # Quick status request
-/home/tmux/send-claude-message.sh session:0 "Quick status update please"
+/home/tmux/send-claude-message.sh session: "Quick status update please"
 
 # Detailed status request
-/home/tmux/send-claude-message.sh session:0 "STATUS UPDATE: Please provide: 1) Completed tasks, 2) Current work, 3) Any blockers"
+/home/tmux/send-claude-message.sh session: "STATUS UPDATE: Please provide: 1) Completed tasks, 2) Current work, 3) Any blockers"
 ```
 
 ##### 4. Providing Assistance
 ```bash
 # Share error information
-/home/tmux/send-claude-message.sh session:0 "I see in your server window that port 3000 is already in use. Try port 3001 instead."
+/home/tmux/send-claude-message.sh session: "I see in your server window that port 3000 is already in use. Try port 3001 instead."
 
 # Guide stuck agents
-/home/tmux/send-claude-message.sh session:0 "The error you're seeing is because the virtual environment isn't activated. Run 'source venv/bin/activate' first."
+/home/tmux/send-claude-message.sh session: "The error you're seeing is because the virtual environment isn't activated. Run 'source venv/bin/activate' first."
 ```
 
 #### OLD METHOD (DO NOT USE)
@@ -750,50 +762,140 @@ tmux send-keys -t session:window Enter
 After sending a message, use the scheduler to check for responses (avoid `sleep` which blocks conversation):
 ```bash
 # Send message
-/home/tmux/send-claude-message.sh session:0 "What's your status?"
+/home/tmux/send-claude-message.sh session: "What's your status?"
 
 # Schedule a check-in (does NOT block conversation)
-/home/tmux/schedule_with_note.sh 1 "Check agent response" 0:0.0 0:0.1
+/home/tmux/schedule_with_note.sh 1 "Check agent response" "$ORCH" "$AGENT"
 ```
+
+## Tmux Addressing (base-index 1)
+
+`~/.tmux.conf` sets `base-index 1` and `pane-base-index 1`. **Windows and panes are numbered from 1, never 0.** A target like `session:0` or `X:Y.0` does not exist, and in a split window `.1` is the *first* pane (usually the orchestrator), not the second.
+
+Rules:
+- **Prefer names over numbers**: `duke:httpdocs`, `AILA:` (trailing colon = the session's current window).
+- **Never hardcode the orchestrator's address.** Look it up at runtime:
+  ```bash
+  ORCH=$(tmux display-message -p -t "$TMUX_PANE" '#{session_name}:#{window_index}.#{pane_index}')
+  ORCH_WIN=${ORCH%.*}
+  ```
+- **Capture an agent pane's address when you create it**, rather than predicting its index:
+  ```bash
+  AGENT=$(tmux display-message -p -t "$ORCH_WIN" '#{session_name}:#{window_index}.#{pane_index}')  # right after join/split, the new pane is active
+  ```
+- When unsure, list panes: `tmux list-panes -t "$ORCH_WIN" -F '#{pane_index} #{pane_current_path} #{pane_current_command}'`
+
+The examples below use `$ORCH`, `$ORCH_WIN`, and `$AGENT` from these lookups.
 
 ## Split-Pane Orchestration
 
 ### Overview
 Run agents in split panes so the user can watch them work alongside the orchestrator conversation.
 
+### 🚨 CRITICAL: Starting Claude Code with Correct Project Context
+
+**Claude Code determines its project context from the working directory when it starts.**
+You MUST `cd` to the project directory BEFORE running `claude`.
+
+```bash
+# ❌ WRONG - Claude will use whatever directory the shell started in
+tmux new-session -d -s temp-agent -c "/path/to/project"
+tmux send-keys -t temp-agent: "claude" Enter  # May not pick up project!
+
+# ✅ CORRECT - Explicitly cd then run claude
+tmux new-session -d -s temp-agent
+tmux send-keys -t temp-agent: "cd /path/to/project && claude" Enter
+```
+
+**Why this matters:**
+- The `-c` flag sets the pane's directory, but shell startup scripts may change it
+- Claude Code reads `CLAUDE.md` and project config from its starting directory
+- Wrong project context = agent lacks project-specific instructions and knowledge
+
+---
+
+### Default Layout: Orchestrator Top, Agents Bottom
+**ALWAYS** open new agent sessions in the bottom portion of the window, with multiple agents split horizontally. Typical addresses (orchestrator window `0:1`), but always confirm with the lookups above:
+
+```
++--------------------------------------------+
+|            Orchestrator (0:1.1)            |
+|              (top pane - you)              |
++---------------------+----------------------+
+|   Agent 1 (0:1.2)   |   Agent 2 (0:1.3)    |
+|   (bottom-left)     |   (bottom-right)     |
++---------------------+----------------------+
+```
+
+#### Adding the First Agent
+```bash
+# 1. Create a temporary session for the agent
+tmux new-session -d -s temp-agent
+tmux send-keys -t temp-agent: "cd /path/to/project && claude" Enter
+sleep 5
+
+# 2. Join it to the bottom of the orchestrator window (vertical split)
+tmux join-pane -v -s temp-agent: -t "$ORCH" -l 50%
+AGENT1=$(tmux display-message -p -t "$ORCH_WIN" '#{session_name}:#{window_index}.#{pane_index}')
+
+# 3. The temp session is gone automatically once its only pane moves; this is a safety net
+tmux kill-session -t temp-agent 2>/dev/null
+```
+
+#### Adding Additional Agents (Horizontal Split in Bottom)
+```bash
+# 1. Create temporary session for the new agent
+tmux new-session -d -s temp-agent2
+tmux send-keys -t temp-agent2: "cd /path/to/other/project && claude" Enter
+sleep 5
+
+# 2. Join it horizontally to the existing bottom pane
+tmux join-pane -h -s temp-agent2: -t "$AGENT1" -l 50%
+AGENT2=$(tmux display-message -p -t "$ORCH_WIN" '#{session_name}:#{window_index}.#{pane_index}')
+
+# 3. Clean up
+tmux kill-session -t temp-agent2 2>/dev/null
+```
+
+#### Why This Layout?
+- **User visibility**: User can monitor all agents while conversing with orchestrator
+- **Clear hierarchy**: Orchestrator on top emphasizes its oversight role
+- **Easy navigation**: `Ctrl+b ↓` to agents, `Ctrl+b ↑` to orchestrator
+- **Scalable**: Additional agents split horizontally in bottom row
+
 ### Creating Split Panes
 ```bash
-# Split current window horizontally (side-by-side)
-tmux split-window -h -t 0:0
+# Split the orchestrator window horizontally (side-by-side)
+tmux split-window -h -t "$ORCH_WIN"
 
-# Split current window vertically (top/bottom)
-tmux split-window -v -t 0:0
+# Split the orchestrator window vertically (top/bottom)
+tmux split-window -v -t "$ORCH_WIN"
 
-# Pane addressing after split:
-# - Original pane: 0:0.0
-# - New pane: 0:0.1
-# - Additional splits: 0:0.2, 0:0.3, etc.
+# Pane addressing after split (pane-base-index 1):
+# - Original pane: .1
+# - New pane: .2
+# - Additional splits: .3, .4, etc. (indexes follow screen position, so confirm with list-panes)
 ```
 
 ### Starting an Agent in a Split Pane
 ```bash
-# 1. Split the window
-tmux split-window -h -t 0:0
+# 1. Split the window and capture the new pane's address (-P prints it)
+AGENT=$(tmux split-window -h -t "$ORCH_WIN" -P -F '#{session_name}:#{window_index}.#{pane_index}')
 
 # 2. Start Claude in the new pane (account for user's shell startup behavior)
-tmux send-keys -t 0:0.1 "cd /path/to/project && claude" Enter
+tmux send-keys -t "$AGENT" "cd /path/to/project && claude" Enter
 
 # 3. Register the agent in your internal mapping
-# Project: myproject → Pane: 0:0.1
+# Project: myproject → Pane: $AGENT (e.g. 0:1.2)
 ```
 
 ### Switching Layouts
 ```bash
 # Side-by-side (left/right)
-tmux select-layout -t 0:0 even-horizontal
+tmux select-layout -t "$ORCH_WIN" even-horizontal
 
 # Stacked (top/bottom)
-tmux select-layout -t 0:0 even-vertical
+tmux select-layout -t "$ORCH_WIN" even-vertical
 
 # Cycle through layouts
 # User can press: Ctrl+b Space
@@ -801,8 +903,8 @@ tmux select-layout -t 0:0 even-vertical
 
 ### Closing Agent Panes
 ```bash
-# Close a specific pane
-tmux kill-pane -t 0:0.1
+# Close a specific pane (double-check it is NOT $ORCH first)
+tmux kill-pane -t "$AGENT"
 
 # Update your agent registry to remove the entry
 ```
@@ -812,10 +914,10 @@ tmux kill-pane -t 0:0.1
 
 ```bash
 # ❌ DON'T DO THIS - blocks conversation:
-sleep 60 && tmux capture-pane -t 0:0.1 -p
+sleep 60 && tmux capture-pane -t "$AGENT" -p
 
 # ✅ DO THIS - non-blocking:
-/home/tmux/schedule_with_note.sh 1 "Check agent progress" 0:0.0 0:0.1
+/home/tmux/schedule_with_note.sh 1 "Check agent progress" "$ORCH" "$AGENT"
 ```
 
 The scheduler will send a reminder to your pane when it's time to check, allowing conversation to continue.
